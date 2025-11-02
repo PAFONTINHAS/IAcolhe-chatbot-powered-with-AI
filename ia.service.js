@@ -1,59 +1,47 @@
-// ia.service.js (Versão OpenAI com RADARES)
-const { OpenAI } = require("openai");
-require("dotenv").config();
+// ia.service.js (Versão MOCK - Cérebro Falso)
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-const systemPrompt = `
-    Você é um agente de atendimento virtual para um programa de auxílio a vítimas de calamidades.
-    Seu objetivo é **exclusivamente** verificar a elegibilidade e coletar documentos.
-    Siga as regras: seja empático, direto e não saia do fluxo.
-    O fluxo é: [INICIO] -> [COLETANDO_LOCAL] -> [VERIFICANDO_LOCAL] -> [COLETANDO_DOCUMENTOS] -> [FINALIZADO].
-
-    Sua resposta **DEVE** ser um objeto JSON no formato:
-    {
-      "resposta_usuario": "O texto que devo enviar ao usuário.",
-      "novo_estado": "O novo estado do fluxo (ex: COLETANDO_LOCAL, VERIFICANDO_LOCAL, etc.)"
-    }
-`;
-
+// Esta função FINGE ser uma IA.
+// Ela não tem NENHUMA chamada externa (OpenAI, etc). É instantânea.
 async function processarMensagemIA(mensagemUsuario, estadoAtual) {
-  console.log(`[IA Service] Processando: "${mensagemUsuario}" no estado "${estadoAtual}"`);
-  try {
-    const promptRefinado = `
-      Estado atual do usuário: "${estadoAtual}"
-      Mensagem do usuário: "${mensagemUsuario}"
-      Determine a resposta e o próximo estado.
-    `;
+  
+  // Simula uma pequena demora só para parecer real (10ms)
+  await new Promise(resolve => setTimeout(resolve, 10));
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo-1106", // Modelo rápido e que suporta JSON
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: promptRefinado },
-      ],
-      response_format: { type: "json_object" }, // Força a saída em JSON!
-    });
+  // --- ESTE É O NOSSO "CÉREBRO" FALSO ---
 
-    const respostaTexto = completion.choices[0].message.content;
-    console.log("[IA Service] Resposta BRUTA da OpenAI:", respostaTexto);
-
-    const jsonOutput = JSON.parse(respostaTexto);
-    console.log("[IA Service] JSON da IA processado:", jsonOutput);
-
-    return jsonOutput;
-
-  } catch (error) {
-    // SE DER ERRO AQUI, VOCÊ VAI VER NO TERMINAL
-    console.error("--- ERRO FATAL NO IA SERVICE ---:", error);
+  // 1. O usuário está começando
+  if (estadoAtual === "INICIO") {
     return {
-      resposta_usuario:
-        "Desculpe, estou com um problema técnico (IA). Tente novamente em alguns instantes.",
-      novo_estado: estadoAtual,
+      resposta_usuario: "Olá! Este é o assistente de calamidades. Para verificar sua elegibilidade, por favor, nos informe sua cidade e estado ou CEP.",
+      novo_estado: "COLETANDO_LOCAL"
     };
   }
+
+  // 2. O usuário está enviando o local
+  if (estadoAtual === "COLETANDO_LOCAL") {
+    // A lógica de *validar* o local está no index.js
+    // Aqui só precisamos "empurrar" para a verificação.
+    return {
+      resposta_usuario: `Entendido, verificando o local: ${mensagemUsuario}...`,
+      novo_estado: "VERIFICANDO_LOCAL" // Isso vai ativar o if no index.js!
+    };
+  }
+
+  // 3. O usuário está enviando "sim" para os documentos
+  if (estadoAtual === "COLETANDO_DOC_FRENTE" || estadoAtual === "COLETANDO_DOC_VERSO") {
+    // Se o usuário digitar texto em vez de mandar foto
+    return {
+      resposta_usuario: "Por favor, para esta etapa, preciso que você envie uma foto do seu documento, não um texto.",
+      novo_estado: estadoAtual // Mantém o estado
+    };
+  }
+
+  // 4. Qualquer outra coisa
+  return {
+    resposta_usuario: "Desculpe, não entendi. Para reiniciar, diga 'oi'.",
+    novo_estado: "INICIO"
+  };
 }
 
+// Exporta a função
 module.exports = { processarMensagemIA };
